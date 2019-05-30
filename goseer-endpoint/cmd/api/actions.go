@@ -1,21 +1,19 @@
 package main
 
 import (
-	"net/http"
+	"fmt"
 	"strings"
-	"github.com/gin-gonic/gin"
 	"github.com/ssimunic/gosensors"
 
 )
 
-func fetchSystemTemps(c *gin.Context) {
+func fetchSystemTemps() []map[string]string {
 	sensors, err := gosensors.NewFromSystem()
 	var data []map[string]string
 	var tempString string
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		panic(err)
+		fmt.Println(err)
 	}
 
 	for chip := range sensors.Chips {
@@ -24,11 +22,11 @@ func fetchSystemTemps(c *gin.Context) {
 				returnValue := make(map[string]string)
 
 				startIndex := strings.Index(value, "+")
-				endIndex := strings.Index(value, " ")
-				highStartIndex := strings.Index(value, "high") + len("high") + 3
-				highEndIndex := strings.Index(value, ",")
-				criticalStartIndex := strings.Index(value, "crit") + len("crit") + 3
-				criticalEndIndex := strings.Index(value, ")")
+				endIndex := strings.Index(value, " ") - 3
+				highStartIndex := strings.Index(value, "high") + len("high") + 4
+				highEndIndex := strings.Index(value, ",") - 3
+				criticalStartIndex := strings.Index(value, "crit") + len("crit") + 4
+				criticalEndIndex := strings.Index(value, ")") - 3
 
 				newValue := ""
 				highValue := ""
@@ -41,7 +39,7 @@ func fetchSystemTemps(c *gin.Context) {
 				}
 				returnValue["adapter"] = key
 				returnValue["currentTemp"] = newValue
-				returnValue["maxTemp"] = highValue
+				returnValue["highTemp"] = highValue
 				returnValue["criticalTemp"] = criticalValue
 
 				data = append(data, returnValue)
@@ -49,12 +47,7 @@ func fetchSystemTemps(c *gin.Context) {
 			}
 		}
 	}
-	tempString = strings.TrimRight(tempString, "|")
 
-	//dbTemp := tempModel{Temps: tempString}
-
-	//db.Save(&dbTemp)
-
-	c.JSON(http.StatusOK, gin.H{"temps": data})
+	return data
 
 }
