@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -12,6 +14,10 @@ type (
 		gorm.Model
 		Username     string `json:"username"`
 		PasswordHash string	`json:"pass"`
+		IpAddress string
+		SessionId string
+		AuthSig string
+		ExpiriationTime time.Time
 	}
 )
 
@@ -33,7 +39,10 @@ func createUser(db *gorm.DB) gin.HandlerFunc {
 				panic(err)
 			}
 
+			ipAddress := c.ClientIP()
+
 			user.PasswordHash = string(hash)
+			user.IpAddress = ipAddress
 
 			db.Create(&user)
 			c.JSON(201, gin.H{"message": "User created successfully"})
@@ -64,7 +73,14 @@ func verifyUser(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(202, gin.H{"token": "12345"}) // Return authentication token for the user.
+		now := time.Now()
+		sessionID := uuid.New()
+
+		foundUser.ExpiriationTime = now.Add(time.Minute * 30)
+		foundUser.SessionId = sessionID.String()
+		db.Save(&foundUser)
+
+		c.JSON(202, gin.H{"sessionID:": sessionID.String(), "token": "12345"}) // Return authentication token for the user.
 		return
 	}
 

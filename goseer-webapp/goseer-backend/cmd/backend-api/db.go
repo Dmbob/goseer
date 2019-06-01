@@ -8,19 +8,23 @@ import (
 /*
 * This function will initialize a database connection and then return it.
 */
-func initDB() *gorm.DB {
-	DBUSER := ""
-	DBPASS := ""
-	DBADDRESS := ""
-	DBPORT := ""
-	DBNAME := "goseer"
+func initDB(config *Config) *gorm.DB {
+	DBUSER := config.DBUser
+	DBPASS := config.DBPass
+	DBADDRESS := config.DBAddress
+	DBPORT := config.DBPort
+	DBNAME := config.DBName
 
 	db, err := gorm.Open("mysql", DBUSER+":"+DBPASS+"@tcp("+DBADDRESS+":"+DBPORT+")/"+DBNAME+"?charset=utf8&parseTime=True&loc=Local")
 	if err != nil {
 		panic(err)
 	}
 
-	db.AutoMigrate(&User{})
+	migrateStructs(db)
 
 	return db
+}
+
+func migrateStructs(db *gorm.DB) {
+	db.AutoMigrate(&User{})
 }
