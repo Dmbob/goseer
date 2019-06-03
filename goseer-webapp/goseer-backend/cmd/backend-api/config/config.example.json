@@ -1,0 +1,8 @@
+{
+    "serverport": "[Port to run API Server on]",
+    "dbuser": "[MySQL Username]",
+    "dbpass": "[MySQL Password]",
+    "dbaddress": "[MySQL Server Address]",
+    "dbport": "[MySQL Server Port]",
+    "dbname": "[GoSeer Table Name]"
+}
