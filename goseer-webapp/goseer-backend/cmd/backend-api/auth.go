@@ -1,22 +1,22 @@
 package main
 
 import (
-	"os"
-	"time"
-	"strings"
-	"crypto/hmac"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"os"
+	"strings"
+	"time"
 )
 
 type (
 	JwtAuthToken struct {
-		Header string
-		Payload string
+		Header    string
+		Payload   string
 		Signature string
 	}
 )
@@ -30,7 +30,7 @@ func createToken(user *User) *JwtAuthToken {
 	payload["user"] = user.Username
 	payload["exp"] = string(time.Now().Unix() + 100000)
 
-	userSecret, err := decSecret(user.AuthSig)
+	userSecret, err := decSecret(user.SecKey)
 	if err != nil {
 		panic(err)
 	}

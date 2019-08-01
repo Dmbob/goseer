@@ -47,7 +47,7 @@ class TempGraph extends Component {
             <div style={styles.container}>
                 {this.state.tempData.length > 0 && 
                     <div>
-                        <BarChart width={700} height={600} data={this.state.tempData}>
+                        <BarChart width={this.props.size.w} height={this.props.size.h} data={this.state.tempData}>
                             <XAxis dataKey="adapter" />
                             <YAxis 
                                 tickFormatter={(tick) => (`${tick} ºC`)}
@@ -57,7 +57,7 @@ class TempGraph extends Component {
                         </BarChart>
                     </div>
                 }
-                <Websocket url="ws://192.168.1.2:8080/"
+                <Websocket url="ws://localhost:8080/"
                     onOpen={this.socketOpened.bind(this)}
                     onMessage={this.handleSocketMessage.bind(this)}
                     ref={

@@ -1,36 +1,36 @@
 package main
 
 import (
+	"crypto/rand"
 	"time"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type (
 	// User structure used for database interactions.
 	User struct {
 		gorm.Model
-		Username     string `json:"username"`
-		PasswordHash string	`json:"pass"`
-		IpAddress string
-		SessionId string
-		AuthSig string
+		Username        string `json:"username"`
+		PasswordHash    string `json:"pass"`
+		IPAddress       string
+		SecKey          string
 		ExpiriationTime time.Time
 	}
 )
 
 /*
 * This function will create a user in the database if they do not exist already.
-*/
+ */
 func createUser(db *gorm.DB) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
 		var user User
 		c.BindJSON(&user)
 
 		var existingUsers []User
-	
+
 		db.Where("username = ?", user.Username).Find(&existingUsers)
 
 		if len(existingUsers) == 0 {
@@ -42,11 +42,23 @@ func createUser(db *gorm.DB) gin.HandlerFunc {
 			ipAddress := c.ClientIP()
 
 			user.PasswordHash = string(hash)
-			user.IpAddress = ipAddress
+			user.IPAddress = ipAddress
+
+			tokenString := make([]byte, 4)
+			rand.Read(tokenString)
+
+			secret, err := encSecret("1234")
+
+			if err != nil {
+				c.JSON(501, gin.H{"message": "There was an error creating the user"})
+				return
+			}
+
+			user.SecKey = secret
 
 			db.Create(&user)
 			c.JSON(201, gin.H{"message": "User created successfully"})
-		}else {
+		} else {
 			c.JSON(202, gin.H{"message": "User already exists"})
 		}
 	}
@@ -56,7 +68,7 @@ func createUser(db *gorm.DB) gin.HandlerFunc {
 
 /*
 * This function will verify a user's password and return a login token if it is successful.
-*/
+ */
 func verifyUser(db *gorm.DB) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
 		var user User
@@ -73,14 +85,11 @@ func verifyUser(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		now := time.Now()
-		sessionID := uuid.New()
+		jwtToken := createToken(&foundUser)
 
-		foundUser.ExpiriationTime = now.Add(time.Minute * 30)
-		foundUser.SessionId = sessionID.String()
-		db.Save(&foundUser)
+		returnToken := jwtToken.Header + "." + jwtToken.Payload + "." + jwtToken.Signature
 
-		c.JSON(202, gin.H{"sessionID:": sessionID.String(), "token": "12345"}) // Return authentication token for the user.
+		c.JSON(202, gin.H{"token": returnToken}) // Return authentication token for the user.
 		return
 	}
 
