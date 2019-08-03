@@ -7,10 +7,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
-	"time"
 )
 
 type (
@@ -28,7 +29,7 @@ func createToken(user *User) *JwtAuthToken {
 
 	payload := make(map[string]string)
 	payload["user"] = user.Username
-	payload["exp"] = string(time.Now().Unix() + 100000)
+	payload["exp"] = "2019-08-03"
 
 	userSecret, err := decSecret(user.SecKey)
 	if err != nil {
@@ -49,13 +50,16 @@ func generateNewToken(header string, payload string, secret string) *JwtAuthToke
 	key := []byte(secret)
 	h := hmac.New(sha256.New, key)
 
-	sigValue := strings.TrimRight(base64.URLEncoding.EncodeToString([]byte(header)), "=") + "." + strings.TrimRight(base64.URLEncoding.EncodeToString([]byte(payload)), "=")
+	encodedHeader := strings.TrimRight(base64.URLEncoding.EncodeToString([]byte(header)), "=")
+	encodedPayload := strings.TrimRight(base64.URLEncoding.EncodeToString([]byte(payload)), "=")
+
+	sigValue := encodedHeader + "." + encodedPayload
 
 	h.Write([]byte(sigValue))
 
-	signature := sigValue + base64.StdEncoding.EncodeToString(h.Sum(nil))
+	signature := strings.TrimRight(base64.URLEncoding.EncodeToString(h.Sum(nil)), "=")
 
-	return &JwtAuthToken{header, payload, signature}
+	return &JwtAuthToken{encodedHeader, encodedPayload, signature}
 }
 
 func encSecret(sec string) (string, error) {
@@ -82,11 +86,13 @@ func encSecret(sec string) (string, error) {
 
 	cipher := aesgcm.Seal(iv, iv, []byte(sec), nil)
 
-	return string(cipher), nil
+	return fmt.Sprintf("%x", cipher), nil
 }
 
 func decSecret(sec string) (string, error) {
 	goSecret := os.Getenv("GOSEERSEC")
+
+	secretKey, _ := hex.DecodeString(sec)
 
 	if goSecret == "" {
 		panic("GoSeer secret not found!")
@@ -102,14 +108,13 @@ func decSecret(sec string) (string, error) {
 		return "", err
 	}
 
-	if len([]byte(sec)) < aesgcm.NonceSize() {
-		panic("Bad secret key")
-	}
+	ivSize := aesgcm.NonceSize()
+	iv, ciphertext := secretKey[:ivSize], secretKey[ivSize:]
 
-	key, err := aesgcm.Open(nil, []byte(sec)[:aesgcm.NonceSize()], []byte(sec)[aesgcm.NonceSize():], nil)
+	key, err := aesgcm.Open(nil, iv, ciphertext, nil)
 	if err != nil {
 		return "", err
 	}
 
-	return string(key), nil
+	return fmt.Sprintf("%s", string(key)), nil
 }
