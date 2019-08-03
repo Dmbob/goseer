@@ -16,7 +16,7 @@ class Toolbar extends Component {
                 <Navbar.Brand href="#home">GoSeer Monitor</Navbar.Brand>
                 <Navbar.Toggle />
                 <Navbar.Collapse className="justify-content-end">
-                    <Navbar.Text>Logout</Navbar.Text>
+                    <Navbar.Text><a href="#">Logout</a></Navbar.Text>
                 </Navbar.Collapse>
             </Navbar>
         )
